@@ -117,15 +117,15 @@ with model:
     '''
     
     
-    magenta = nengo.Ensemble(n_neurons=100, dimensions=3)
+    magenta = nengo.Ensemble(n_neurons=50, dimensions=2)
     nengo.Connection(magenta, magenta)
-    red = nengo.Ensemble(n_neurons=100, dimensions=3)
+    red = nengo.Ensemble(n_neurons=50, dimensions=2)
     nengo.Connection(red, red)
-    blue = nengo.Ensemble(n_neurons=100, dimensions=3)
+    blue = nengo.Ensemble(n_neurons=50, dimensions=2)
     nengo.Connection(blue, blue)
-    green = nengo.Ensemble(n_neurons=100, dimensions=3)
+    green = nengo.Ensemble(n_neurons=50, dimensions=2)
     nengo.Connection(green, green)
-    yellow = nengo.Ensemble(n_neurons=100, dimensions=3)
+    yellow = nengo.Ensemble(n_neurons=50, dimensions=2)
     nengo.Connection(yellow, yellow)
     
     
@@ -145,8 +145,6 @@ with model:
     stim_radar = nengo.Node(detect)
     
     
-    def to3d(x):
-        return x*0, x*0, x
     #This node returns the colour of the cell currently occupied. Note that you might want to transform this into 
     #something else (see the assignment)
     
@@ -158,12 +156,16 @@ with model:
     color_diff = nengo.Ensemble(100, 1)
     #color_map = nengo.Ensemble(n_neurons=100, dimensions=4)
     
-    radar = nengo.Ensemble(n_neurons=100, dimensions=5, radius=4)
-    nengo.Connection(stim_radar, radar[2:5])
-    nengo.Connection(current_color, radar[0])
-    nengo.Connection(targ_color, radar[1])
+    radar = nengo.Ensemble(n_neurons=50, dimensions=3, radius=4)
+    nengo.Connection(stim_radar, radar)
+    #nengo.Connection(current_color, radar[0])
+    #nengo.Connection(targ_color, radar[1])
     
-    
+    def sensor(t, x):
+        if x[0] == x[1]:
+            return 1
+        else:
+            return 0
     
     
             
@@ -171,15 +173,15 @@ with model:
     
     #a basic movement function that just avoids walls based
     def movement_func(x):
-        turn = x[4] - x[2]
-        spd = x[3] - 0.5
+        turn = x[2] - x[0]
+        spd = x[1] - 0.8
         #print(x[1])
         #move_to_col(turn, spd, x[3], x[4])
-        return body.cell.cellcolor, x[1], spd, turn
+        return spd, turn
     
     #the movement function is only driven by information from the
     #radar 
-    #nengo.Connection(radar, movement, function=movement_func)  
+    nengo.Connection(radar, movement, function=movement_func)  
     #nengo.Connection(targ_color, movement[4]) 
     
     
@@ -201,28 +203,31 @@ with model:
     diff_yellow = nengo.Ensemble(100, 3)
     diff_green = nengo.Ensemble(100, 3)
     
-    
+    #'G' = 1
+    #'R' = 2
+    #'B' = 3
+    #'M' = 4
+    #'Y' = 5
     
     nengo.Connection(position, diff_blue)
-    nengo.Connection(diff_blue, blue)
-    nengo.Connection(blue, diff_blue)
+    nengo.Connection(diff_blue, blue, function=lambda x: x[0:2]*x[2])
+    nengo.Connection(blue, diff_blue, function=lambda x: np.array([-x[0], -x[1], int(body.cell.cellcolor==3)]))
     
     nengo.Connection(position, diff_yellow)
-    nengo.Connection(yellow, diff_yellow)
-    nengo.Connection(diff_yellow, yellow)
+    nengo.Connection(yellow, diff_yellow, function=lambda x: np.array([-x[0], -x[1], int(body.cell.cellcolor==5)]))
+    nengo.Connection(diff_yellow, yellow, function=lambda x: x[0:2]*x[2])
     
     nengo.Connection(position, diff_red)
-    nengo.Connection(red, diff_red)
-    nengo.Connection(diff_red,red)
+    nengo.Connection(red, diff_red, function=lambda x: np.array([-x[0], -x[1], int(body.cell.cellcolor==2)]))
+    nengo.Connection(diff_red,red, function=lambda x: x[0:2]*x[2])
     
     nengo.Connection(position, diff_magenta)
-    nengo.Connection(magenta, diff_magenta)
-    nengo.Connection(diff_magenta, magenta)
+    nengo.Connection(magenta, diff_magenta, function=lambda x: np.array([-x[0], -x[1], int(body.cell.cellcolor==4)]))
+    nengo.Connection(diff_magenta, magenta, function=lambda x: x[0:2]*x[2])
     
     nengo.Connection(position, diff_green)
-    nengo.Connection(green, diff_green)
-    nengo.Connection(diff_green, green)
+    nengo.Connection(green, diff_green, function=lambda x: np.array([-x[0], -x[1], int(body.cell.cellcolor==1)]))
+    nengo.Connection(diff_green, green, function=lambda x: x[0:2]*x[2])
     
-    
-    #nengo.Connection(current_color, color_map[0])
+
     #nengo.Connection(position, color_map[1:4])
